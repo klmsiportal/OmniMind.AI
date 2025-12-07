@@ -30,21 +30,31 @@ export interface ChatSession {
   title: string;
   messages: Message[];
   updatedAt: number;
+  agentId?: string; // Track which agent started this chat
 }
 
 export enum ModelType {
   FLASH = 'gpt-4o-mini',
   PRO = 'gpt-4o',
   IMAGE = 'dall-e-3', 
-  CODER = 'gpt-4o-coder',
-  WRITER = 'gpt-4o-writer',
-  SEARCH = 'gpt-4o-search', // Internal mapping for search mode
+}
+
+export type AgentCategory = 'General' | 'Coding' | 'Writing' | 'Productivity' | 'Data' | 'Lifestyle' | 'Academic' | 'Creative';
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: AgentCategory;
+  systemPrompt: string;
+  model: ModelType; // Preferred model for this agent
 }
 
 export interface AppState {
   currentSessionId: string | null;
   sessions: ChatSession[];
   isSidebarOpen: boolean;
-  selectedModel: ModelType;
+  selectedAgentId: string;
   isSearchEnabled: boolean; 
 }

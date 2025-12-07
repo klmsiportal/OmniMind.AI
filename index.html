@@ -41,8 +41,8 @@
       }
       /* Custom scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
         background: transparent;
@@ -54,27 +54,8 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #4a5568;
       }
-      .markdown-body pre {
-        background-color: #1a1d21;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        overflow-x: auto;
-        border: 1px solid #2d3748;
-      }
-      .markdown-body code {
-        font-family: 'JetBrains Mono', monospace;
-        background-color: #2d3748;
-        padding: 0.2rem 0.4rem;
-        border-radius: 0.25rem;
-        font-size: 0.875em;
-      }
-      .markdown-body pre code {
-        background-color: transparent;
-        padding: 0;
-      }
       .markdown-body p {
-        margin-bottom: 1rem;
-        line-height: 1.6;
+        margin-bottom: 1.25rem;
       }
       .markdown-body ul {
         list-style-type: disc;
@@ -89,12 +70,30 @@
       .markdown-body a {
         color: #60a5fa;
         text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .markdown-body strong {
+        color: #fff;
+        font-weight: 600;
+      }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        color: #fff;
+        font-weight: 700;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
       }
       .glass-panel {
         background: rgba(17, 19, 21, 0.7);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
       }
     </style>
   <script type="importmap">
