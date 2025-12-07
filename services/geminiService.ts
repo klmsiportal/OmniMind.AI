@@ -19,7 +19,6 @@ export const openai = new OpenAI({
 /* ---------------------------------------------
    TYPES
 ---------------------------------------------- */
-
 interface GenerateParams {
   model: string;
   prompt: string;
@@ -31,9 +30,9 @@ const resolveModel = (modelId: string): string => {
   switch (modelId) {
     case ModelType.CODER:
     case ModelType.WRITER:
-      return "gpt-4.1"; // Better & cheaper than 4o
+      return "gpt-4.1";
     default:
-      return "gpt-4o"; // Default model
+      return "gpt-4o";
   }
 };
 
@@ -68,7 +67,7 @@ Write creatively, persuasively, and with human tone.
 };
 
 /* ---------------------------------------------
-   STREAM RESPONSE (NEW OPENAI SDK)
+   FIXED STREAMING (NEW SDK)
 ---------------------------------------------- */
 
 export const streamResponse = async (
@@ -86,23 +85,9 @@ export const streamResponse = async (
   const modelName = resolveModel(model);
   const systemPrompt = buildSystemPrompt(model, !!useSearch);
 
-  // Build user content
-  const userParts: any[] = [{ type: "input_text", text: prompt }];
-
-  if (images?.length) {
-    images.forEach((img) => {
-      userParts.push({
-        type: "input_image",
-        image_url: img,
-      });
-    });
-  }
-
   try {
-    // NEW SDK FORMAT
-    const response = await openai.responses.create({
+    const stream = await openai.responses.stream({
       model: modelName,
-      reasoning: { effort: "medium" },
       input: [
         {
           role: "system",
@@ -110,42 +95,41 @@ export const streamResponse = async (
         },
         {
           role: "user",
-          content: userParts,
+          content: [
+            { type: "input_text", text: prompt },
+            ...(images?.map((img) => ({
+              type: "input_image",
+              image_url: img,
+            })) || []),
+          ],
         },
       ],
-      stream: true,
     });
 
     let buffer = "";
 
-    for await (const event of response) {
-      const text = event?.output_text || "";
+    for await (const event of stream) {
+      const text = event?.delta?.text;
       if (text) {
-        buffer = text; // stream replaces, not appends
+        buffer += text;
         onChunk(buffer);
       }
     }
 
     return buffer;
   } catch (err: any) {
-    console.error("Stream Error:", err);
+    console.error("STREAM ERROR:", err);
 
-    if (err?.status === 401) {
-      throw new Error("Invalid API Key.");
-    }
-    if (err?.status === 429) {
-      throw new Error("Rate limit exceeded.");
-    }
-    if (err?.status >= 500) {
-      throw new Error("OpenAI server error.");
-    }
+    if (err?.status === 401) throw new Error("Invalid API Key.");
+    if (err?.status === 429) throw new Error("Rate limit exceeded.");
+    if (err?.status >= 500) throw new Error("OpenAI server error.");
 
     throw new Error("Failed to generate response.");
   }
 };
 
 /* ---------------------------------------------
-   IMAGE GENERATION (FIXED FOR NEW SDK)
+   IMAGE GENERATION
 ---------------------------------------------- */
 
 export const generateImage = async (prompt: string): Promise<string> => {
@@ -164,7 +148,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
 
     return `data:image/png;base64,${b64}`;
   } catch (err) {
-    console.error("Image error:", err);
+    console.error("IMAGE ERROR:", err);
     throw new Error("Image generation failed.");
   }
 };
