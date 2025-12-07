@@ -1,45 +1,22 @@
 // services/openaiService.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import OpenAI from "openai";
-
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY as string;
 
 if (!apiKey) {
-  console.error("❌ Missing VITE_OPENAI_API_KEY in environment variables!");
+  throw new Error("Missing Gemini API Key. Add NEXT_PUBLIC_GEMINI_API_KEY in Vercel.");
 }
 
-const client = new OpenAI({
-  apiKey: apiKey,
-  dangerouslyAllowBrowser: true, // Required for frontend calls
-});
+const genAI = new GoogleGenerativeAI(apiKey);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-export async function askOpenAI(prompt: string): Promise<string> {
+export async function askAI(prompt: string) {
   try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini", // Fast + cheap + high quality
-      messages: [
-        {
-          role: "system",
-          content: "You are OmniMind, an advanced AI created by Akin S. Sokpah."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 10000,
-      temperature: 0.7,
-    });
-
-    return response.choices[0].message.content || "No response received.";
-
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return text;
   } catch (error: any) {
-    console.error("OPENAI ERROR:", error);
-
-    if (error?.error?.message) {
-      return `Error: ${error.error.message}`;
-    }
-
-    return "Sorry, I encountered an error processing your request.";
+    console.error("Gemini Error:", error);
+    return "❌ AI Error: Unable to generate a response right now.";
   }
 }
