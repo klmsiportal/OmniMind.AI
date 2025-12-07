@@ -2,160 +2,169 @@ import OpenAI from "openai";
 import { SYSTEM_INSTRUCTION } from "../constants";
 import { GroundingSource, ModelType } from "../types";
 
-/* ---------------------------------------------------
-   ENVIRONMENT VARIABLE FIX FOR VERCEL + VITE
----------------------------------------------------- */
+/* ---------------------------------------------
+   API KEY FOR VERCEL + VITE
+---------------------------------------------- */
 
 const apiKey =
-  // 1. Vercel + Vite (THIS is the correct source)
   import.meta.env.VITE_OPENAI_API_KEY ||
-  // 2. Fallback for local dev
   process.env.OPENAI_API_KEY ||
   "";
 
-// Initialize client (browser allowed)
-const openai = new OpenAI({
+export const openai = new OpenAI({
   apiKey,
   dangerouslyAllowBrowser: true,
 });
 
-// ---------------------------------------------------
-// Types
-// ---------------------------------------------------
+/* ---------------------------------------------
+   TYPES
+---------------------------------------------- */
 
 interface GenerateParams {
   model: string;
   prompt: string;
-  history?: { role: string; parts: { text: string }[] }[];
   images?: string[];
   useSearch?: boolean;
 }
 
-const getSystemPrompt = (modelId: string, useSearch: boolean): string => {
-  let basePrompt = SYSTEM_INSTRUCTION;
-
-  if (useSearch) {
-    basePrompt += `
-[MODE: DEEP SEARCH]
-Perform deep, structured research.
-Return verifiable, clean information.
-Format with headers and clarity.
-    `;
-  }
-
+const resolveModel = (modelId: string): string => {
   switch (modelId) {
     case ModelType.CODER:
-      return (
-        basePrompt +
-        "\n\n[MODE: SENIOR ENGINEER] Write clean, efficient professional code with explanations."
-      );
     case ModelType.WRITER:
-      return (
-        basePrompt +
-        "\n\n[MODE: CREATIVE WRITER] Produce engaging, persuasive writing with creativity."
-      );
+      return "gpt-4.1"; // Better & cheaper than 4o
     default:
-      return basePrompt;
+      return "gpt-4o"; // Default model
   }
 };
 
-const resolveModelName = (modelId: string): string => {
-  if (modelId === ModelType.CODER || modelId === ModelType.WRITER)
-    return "gpt-4o";
-  return modelId;
+const buildSystemPrompt = (modelId: string, useSearch: boolean): string => {
+  let base = SYSTEM_INSTRUCTION;
+
+  if (useSearch) {
+    base += `
+[WEB_SEARCH_MODE]
+Search the internet for updated information.
+Always cite sources when possible.
+Return clean, structured results.
+`;
+  }
+
+  if (modelId === ModelType.CODER) {
+    base += `
+[CODER_MODE]
+Write clean, optimized, senior-level production code.
+Explain decisions briefly.
+`;
+  }
+
+  if (modelId === ModelType.WRITER) {
+    base += `
+[WRITER_MODE]
+Write creatively, persuasively, and with human tone.
+`;
+  }
+
+  return base;
 };
 
-// ---------------------------------------------------
-// STREAM RESPONSE
-// ---------------------------------------------------
+/* ---------------------------------------------
+   STREAM RESPONSE (NEW OPENAI SDK)
+---------------------------------------------- */
 
 export const streamResponse = async (
   params: GenerateParams,
   onChunk: (text: string, grounding?: GroundingSource[]) => void
-): Promise<string> => {
+) => {
   const { model, prompt, images, useSearch } = params;
 
   if (!apiKey) {
-    const errorMsg =
-      "Configuration Error: Missing API Key.\nFix: Add VITE_OPENAI_API_KEY in Vercel.";
-    onChunk(errorMsg);
-    throw new Error(errorMsg);
+    const msg = "Missing API key. Add VITE_OPENAI_API_KEY in Vercel.";
+    onChunk(msg);
+    throw new Error(msg);
   }
 
-  const actualModel = resolveModelName(model);
-  const systemPrompt = getSystemPrompt(model, !!useSearch);
+  const modelName = resolveModel(model);
+  const systemPrompt = buildSystemPrompt(model, !!useSearch);
 
-  const messages: any[] = [
-    { role: "system", content: systemPrompt },
-  ];
-
-  const userContent: any[] = [{ type: "text", text: prompt }];
+  // Build user content
+  const userParts: any[] = [{ type: "input_text", text: prompt }];
 
   if (images?.length) {
-    images.forEach((img) =>
-      userContent.push({
-        type: "image_url",
-        image_url: { url: img, detail: "high" },
-      })
-    );
+    images.forEach((img) => {
+      userParts.push({
+        type: "input_image",
+        image_url: img,
+      });
+    });
   }
 
-  messages.push({ role: "user", content: userContent });
-
   try {
-    const stream = await openai.chat.completions.create({
-      model: actualModel,
-      messages,
+    // NEW SDK FORMAT
+    const response = await openai.responses.create({
+      model: modelName,
+      reasoning: { effort: "medium" },
+      input: [
+        {
+          role: "system",
+          content: [{ type: "text", text: systemPrompt }],
+        },
+        {
+          role: "user",
+          content: userParts,
+        },
+      ],
       stream: true,
-      max_tokens: 4096,
-      temperature: model === ModelType.CODER ? 0.2 : 0.7,
     });
 
-    let fullText = "";
+    let buffer = "";
 
-    for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content || "";
-      if (content) {
-        fullText += content;
-        onChunk(fullText);
+    for await (const event of response) {
+      const text = event?.output_text || "";
+      if (text) {
+        buffer = text; // stream replaces, not appends
+        onChunk(buffer);
       }
     }
 
-    return fullText;
-  } catch (error: any) {
-    console.error("OpenAI API Error:", error);
-    let msg = "OpenAI request failed.";
+    return buffer;
+  } catch (err: any) {
+    console.error("Stream Error:", err);
 
-    if (error?.status === 401) msg = "Invalid API Key.";
-    if (error?.status === 429) msg = "Rate limit exceeded.";
-    if (error?.status === 500) msg = "OpenAI server error.";
+    if (err?.status === 401) {
+      throw new Error("Invalid API Key.");
+    }
+    if (err?.status === 429) {
+      throw new Error("Rate limit exceeded.");
+    }
+    if (err?.status >= 500) {
+      throw new Error("OpenAI server error.");
+    }
 
-    throw new Error(msg);
+    throw new Error("Failed to generate response.");
   }
 };
 
-// ---------------------------------------------------
-// IMAGE GENERATION
-// ---------------------------------------------------
+/* ---------------------------------------------
+   IMAGE GENERATION (FIXED FOR NEW SDK)
+---------------------------------------------- */
 
 export const generateImage = async (prompt: string): Promise<string> => {
-  if (!apiKey) throw new Error("Missing OpenAI API Key");
+  if (!apiKey) throw new Error("Missing API key.");
 
   try {
-    const response = await openai.images.generate({
-      model: "dall-e-3",
+    const result = await openai.images.generate({
+      model: "gpt-image-1",
       prompt,
       size: "1024x1024",
-      n: 1,
       response_format: "b64_json",
     });
 
-    const b64 = response.data?.[0]?.b64_json;
-    if (!b64) throw new Error("No image returned");
+    const b64 = result.data?.[0]?.b64_json;
+    if (!b64) throw new Error("Failed to generate image");
 
     return `data:image/png;base64,${b64}`;
-  } catch (err: any) {
-    console.error("Image Error:", err);
+  } catch (err) {
+    console.error("Image error:", err);
     throw new Error("Image generation failed.");
   }
 };
