@@ -1,0 +1,8 @@
+{
+  "name": "OmniMind AI",
+  "description": "The ultimate AI assistant combining the best of search, chat, and reasoning. Powered by Google Gemini, tailored for power users.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
