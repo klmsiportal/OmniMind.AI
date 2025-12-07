@@ -7,7 +7,7 @@ export interface User {
 
 export enum Role {
   USER = 'user',
-  MODEL = 'model',
+  MODEL = 'assistant', // OpenAI uses 'assistant' usually, but we map strictly in service
 }
 
 export interface GroundingSource {
@@ -33,10 +33,10 @@ export interface ChatSession {
 }
 
 export enum ModelType {
-  FLASH = 'gemini-2.5-flash',
-  PRO = 'gemini-3-pro-preview',
-  IMAGE = 'gemini-3-pro-image-preview', // High quality image gen
-  SEARCH = 'gemini-2.5-flash-search', // Conceptually using tools
+  FLASH = 'gpt-4o-mini',
+  PRO = 'gpt-4o',
+  IMAGE = 'dall-e-3', 
+  SEARCH = 'gpt-4o-search', // Conceptual internal mapping
 }
 
 export interface AppState {

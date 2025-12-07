@@ -1,6 +1,6 @@
 import { ModelType } from "./types";
 
-// Firebase Configuration from user request
+// Firebase Configuration
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyC5hFB3ICxzyMrlvtnQl-n-2Dkr2RFsmqc",
   authDomain: "fir-9b1f8.firebaseapp.com",
@@ -12,14 +12,14 @@ export const FIREBASE_CONFIG = {
 };
 
 export const MODEL_OPTIONS = [
-  { id: ModelType.FLASH, name: "Omni Flash", description: "Fast, versatile, efficient.", icon: "⚡" },
-  { id: ModelType.PRO, name: "Omni Pro", description: "Complex reasoning & coding.", icon: "🧠" },
-  { id: ModelType.IMAGE, name: "Omni Vision", description: "State-of-the-art Image Generation.", icon: "🎨" },
+  { id: ModelType.FLASH, name: "Omni Mini", description: "Fast, everyday tasks (GPT-4o Mini).", icon: "⚡" },
+  { id: ModelType.PRO, name: "Omni Pro", description: "Reasoning & Coding (GPT-4o).", icon: "🧠" },
+  { id: ModelType.IMAGE, name: "Omni Vision", description: "DALL-E 3 Image Generation.", icon: "🎨" },
 ];
 
-export const SYSTEM_INSTRUCTION = `You are OmniMind, a world-class AI assistant created by Akin S. Sokpah from Liberia. 
-You are helpful, harmless, and honest. 
-You have access to real-time information when the user enables search.
-Structure your answers using Markdown. 
+export const SYSTEM_INSTRUCTION = `You are OmniMind, a world-class AI assistant created by Akin S. Sokpah from Liberia.
+You are powered by OpenAI's advanced models.
+You are helpful, harmless, and honest.
+Structure your answers using Markdown.
 If generating code, use proper syntax highlighting.
 Be concise but comprehensive.`;
