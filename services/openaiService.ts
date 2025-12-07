@@ -27,7 +27,7 @@ export async function askOpenAI(prompt: string): Promise<string> {
           content: prompt
         }
       ],
-      max_tokens: 500,
+      max_tokens: 100000000000000000000000,
       temperature: 0.7,
     });
 
