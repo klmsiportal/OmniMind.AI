@@ -7,7 +7,7 @@ export interface User {
 
 export enum Role {
   USER = 'user',
-  MODEL = 'assistant', // OpenAI uses 'assistant' usually, but we map strictly in service
+  MODEL = 'assistant',
 }
 
 export interface GroundingSource {
@@ -36,7 +36,9 @@ export enum ModelType {
   FLASH = 'gpt-4o-mini',
   PRO = 'gpt-4o',
   IMAGE = 'dall-e-3', 
-  SEARCH = 'gpt-4o-search', // Conceptual internal mapping
+  CODER = 'gpt-4o-coder',
+  WRITER = 'gpt-4o-writer',
+  SEARCH = 'gpt-4o-search', // Internal mapping for search mode
 }
 
 export interface AppState {
@@ -44,5 +46,5 @@ export interface AppState {
   sessions: ChatSession[];
   isSidebarOpen: boolean;
   selectedModel: ModelType;
-  isSearchEnabled: boolean; // Toggle for "Perplexity mode"
+  isSearchEnabled: boolean; 
 }

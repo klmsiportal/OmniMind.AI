@@ -12,8 +12,10 @@ export const FIREBASE_CONFIG = {
 };
 
 export const MODEL_OPTIONS = [
-  { id: ModelType.FLASH, name: "Omni Mini", description: "Fast, everyday tasks (GPT-4o Mini).", icon: "⚡" },
-  { id: ModelType.PRO, name: "Omni Pro", description: "Reasoning & Coding (GPT-4o).", icon: "🧠" },
+  { id: ModelType.FLASH, name: "Omni Mini", description: "Fast, everyday tasks.", icon: "⚡" },
+  { id: ModelType.PRO, name: "Omni Pro", description: "Complex reasoning & deep thought.", icon: "🧠" },
+  { id: ModelType.CODER, name: "Omni Dev", description: "Expert software engineer & architect.", icon: "💻" },
+  { id: ModelType.WRITER, name: "Omni Writer", description: "Creative writing & content engine.", icon: "✍️" },
   { id: ModelType.IMAGE, name: "Omni Vision", description: "DALL-E 3 Image Generation.", icon: "🎨" },
 ];
 
