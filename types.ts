@@ -34,9 +34,9 @@ export interface ChatSession {
 }
 
 export enum ModelType {
-  FLASH = 'gpt-4o-mini',
-  PRO = 'gpt-4o',
-  IMAGE = 'dall-e-3', 
+  FLASH = 'gemini-2.5-flash',
+  PRO = 'gemini-3-pro-preview',
+  IMAGE = 'gemini-2.5-flash-image', 
 }
 
 export type AgentCategory = 'General' | 'Coding' | 'Writing' | 'Productivity' | 'Data' | 'Lifestyle' | 'Academic' | 'Creative';

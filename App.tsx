@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { signInWithGoogle, logOut, useAuth } from './services/firebase';
 import Sidebar from './components/Sidebar';
@@ -26,6 +26,16 @@ const App: React.FC = () => {
       saveHistory: true
   });
   
+  // Refs for auto-save logic
+  const sessionsRef = useRef(sessions);
+  const settingsRef = useRef(settings);
+
+  // Update refs whenever state changes so unmount logic sees latest data
+  useEffect(() => {
+    sessionsRef.current = sessions;
+    settingsRef.current = settings;
+  }, [sessions, settings]);
+  
   // Default to first agent
   const [selectedAgentId, setSelectedAgentId] = useState<string>(AGENTS_LIBRARY[0].id);
   const [isSearchEnabled, setIsSearchEnabled] = useState(false);
@@ -44,8 +54,6 @@ const App: React.FC = () => {
         const loadedSessions = SecureStorage.loadSessions();
         if (loadedSessions.length > 0) {
             setSessions(loadedSessions);
-            // Don't auto-set current session to avoid jumping into old chats immediately, let user choose
-            // or create new one if none exist.
         } else {
             createNewSession();
         }
@@ -70,12 +78,23 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Save Sessions whenever they change
+  // AUTO-SAVE LOGIC: Save on change AND on Unload (Refresh/Close)
   useEffect(() => {
     if (settings.saveHistory && sessions.length > 0) {
         SecureStorage.saveSessions(sessions);
     }
   }, [sessions, settings.saveHistory]);
+
+  // CRITICAL: Save data before page unload (Refresh, Tab Close, Power Off simulation)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+        if (settingsRef.current.saveHistory && sessionsRef.current.length > 0) {
+            SecureStorage.saveSessions(sessionsRef.current);
+        }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Privacy Blur Logic
   useEffect(() => {

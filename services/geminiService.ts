@@ -1,34 +1,9 @@
-import OpenAI from 'openai';
-import { GroundingSource, ModelType } from "../types";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GroundingSource } from "../types";
 
-// --- API Key Detection Strategy for Vercel/Browser ---
-const getEnvVar = (key: string): string => {
-  // 1. Check process.env (Standard Node/CRA/Webpack)
-  if (typeof process !== 'undefined' && process.env && process.env[key]) {
-    return process.env[key] as string;
-  }
-  
-  // 2. Check import.meta.env (Vite/Modern ESM)
-  // @ts-ignore
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-     // @ts-ignore
-     return import.meta.env[key] as string;
-  }
-
-  return '';
-};
-
-// Robust Check
-const apiKey = getEnvVar('OPENAI_API_KEY') || 
-               getEnvVar('REACT_APP_OPENAI_API_KEY') || 
-               getEnvVar('NEXT_PUBLIC_OPENAI_API_KEY') || 
-               getEnvVar('VITE_OPENAI_API_KEY');
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: apiKey || 'dummy-key', // Prevent crash on init, check later
-  dangerouslyAllowBrowser: true 
-});
+// Initialize Google GenAI client
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 interface GenerateParams {
   model: string;
@@ -38,108 +13,98 @@ interface GenerateParams {
   systemInstruction?: string;
 }
 
-const resolveModelName = (modelId: string): string => {
-  if (modelId === ModelType.FLASH) return 'gpt-4o-mini';
-  if (modelId === ModelType.PRO) return 'gpt-4o';
-  return 'gpt-4o'; // Default fallback
-};
-
 export const streamResponse = async (
   params: GenerateParams,
   onChunk: (text: string, grounding?: GroundingSource[]) => void
 ): Promise<string> => {
   const { model, prompt, images, useSearch, systemInstruction } = params;
 
-  if (!apiKey || apiKey === 'dummy-key') {
-    const errorMsg = "Configuration Error: OpenAI API Key is missing. Please ensure OPENAI_API_KEY is set in your Vercel Environment Variables.";
-    onChunk(errorMsg);
-    throw new Error(errorMsg);
+  let contents: any = prompt;
+  
+  // Construct contents with images if present
+  if (images && images.length > 0) {
+    const parts = [];
+    for (const img of images) {
+        // Extract mimeType and base64 data from data URL
+        const match = img.match(/^data:(.+);base64,(.+)$/);
+        if (match) {
+            parts.push({
+                inlineData: {
+                    mimeType: match[1],
+                    data: match[2]
+                }
+            });
+        }
+    }
+    parts.push({ text: prompt });
+    contents = { parts };
   }
 
-  const actualModel = resolveModelName(model);
-  let finalSystemPrompt = systemInstruction || "You are a helpful assistant.";
+  const config: any = {
+      systemInstruction: systemInstruction,
+  };
 
   if (useSearch) {
-    finalSystemPrompt += `\n\n[MODE: DEEP SEARCH]
-You are a research engine. 
-1. Assume you have access to real-time data (simulate based on latest training).
-2. Cite sources in format [Source Title](url).
-3. Be comprehensive and factual.`;
-  }
-
-  // User message construction
-  const userContent: any[] = [{ type: "text", text: prompt }];
-
-  if (images && images.length > 0) {
-    images.forEach(img => {
-      userContent.push({
-        type: "image_url",
-        image_url: {
-          url: img,
-          detail: "high"
-        }
-      });
-    });
+      config.tools = [{ googleSearch: {} }];
   }
 
   try {
-    const stream = await openai.chat.completions.create({
-      model: actualModel,
-      messages: [
-        { role: 'system', content: finalSystemPrompt },
-        { role: 'user', content: userContent }
-      ],
-      stream: true,
-      max_tokens: 4096,
-      temperature: 0.7,
+    const responseStream = await ai.models.generateContentStream({
+      model: model,
+      contents: contents,
+      config: config
     });
 
     let fullText = "";
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || "";
-      if (content) {
-        fullText += content;
-        onChunk(fullText, undefined); 
-      }
+    
+    for await (const chunk of responseStream) {
+       const text = chunk.text;
+       if (text) {
+         fullText += text;
+         
+         // Extract grounding metadata if available
+         let groundingSources: GroundingSource[] | undefined;
+         if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+             const chunks = chunk.candidates[0].groundingMetadata.groundingChunks;
+             groundingSources = chunks
+                .map((c: any) => c.web ? { title: c.web.title, uri: c.web.uri } : null)
+                .filter((c: any) => c !== null);
+         }
+         
+         onChunk(fullText, groundingSources);
+       }
     }
-
     return fullText;
 
   } catch (error: any) {
-    console.error("OpenAI API Error:", error);
-    let errorMsg = "Sorry, an error occurred with OpenAI.";
-    if (error?.status === 401) errorMsg = "Authentication Failed: API Key is invalid or expired.";
-    if (error?.status === 429) errorMsg = "Rate Limit Exceeded: You are sending requests too fast.";
-    
-    throw new Error(errorMsg);
+    console.error("Gemini API Error:", error);
+    throw error;
   }
 };
 
 export const generateImage = async (prompt: string): Promise<string> => {
-    if (!apiKey || apiKey === 'dummy-key') {
-        throw new Error("Missing OpenAI API Key");
-    }
-
     try {
-        const response = await openai.images.generate({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024",
-          response_format: "b64_json", 
-          quality: "hd"
+        // Use gemini-2.5-flash-image for general image generation
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [{ text: prompt }]
+            },
+            // Do not set responseMimeType or responseSchema for nano banana series models
+            config: {} 
         });
-
-        const b64Json = response.data[0].b64_json;
-        if (b64Json) {
-          return `data:image/png;base64,${b64Json}`;
+        
+        // Iterate through parts to find the image
+        if (response.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                }
+            }
         }
-        throw new Error("No image data returned.");
-    } catch (error: any) {
-        console.error("OpenAI Image Gen Error:", error);
-        let errorMsg = "Image generation failed.";
-        if (error?.error?.message) errorMsg += ` ${error.error.message}`;
-        throw new Error(errorMsg);
+        throw new Error("No image data returned from Gemini.");
+    } catch (error) {
+        console.error("Gemini Image Gen Error:", error);
+        throw error;
     }
 }

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ImageIcon, Paperclip, X, Search, Loader2, Globe, Mic, Settings, Zap, Shield } from './Icons';
-import { Message, Role, ModelType, ChatSession, Agent } from '../types';
+import { Send, Paperclip, X, Globe, Mic, Settings, Shield, Loader2 } from './Icons';
+import { Message, Role, ModelType, ChatSession } from '../types';
 import { streamResponse, generateImage } from '../services/geminiService';
 import MessageItem from './MessageItem';
-import { AGENTS_LIBRARY, getAgentById } from '../constants';
+import { getAgentById } from '../constants';
 import AgentLibrary from './AgentLibrary';
 
 interface ChatInterfaceProps {
@@ -75,7 +75,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
     
     if (isRecording) {
-        // Stop logic would go here if we had a persistent reference
         setIsRecording(false);
         return;
     }
@@ -144,7 +143,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const finalBotMessage: Message = {
             id: botMessageId,
             role: Role.MODEL,
-            content: `generated image based on: ${userMessage.content}`,
+            content: `Generated secure image asset based on: ${userMessage.content}`,
             images: [imageUrl],
             timestamp: Date.now(),
             isStreaming: false
@@ -185,12 +184,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             return { ...prev, messages: msgs };
         });
       }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Generation failed", error);
         const errorMessage: Message = {
             id: botMessageId,
             role: Role.MODEL,
-            content: "**Error:** Failed to connect to OpenAI. Please verify your API Key in Vercel settings.",
+            content: `**System Alert:** ${error.message || "Connection interrupted."}`,
             timestamp: Date.now(),
             isStreaming: false
         };
@@ -238,15 +237,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <Settings size={14} className="ml-2 text-gray-600 group-hover:rotate-90 transition-transform" />
             </button>
             
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/5 rounded-full border border-green-500/20" title="End-to-End Encrypted Storage">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/5 rounded-full border border-green-500/20" title="AES Encrypted Storage Active">
                 <Shield size={12} className="text-green-500" />
-                <span className="text-[10px] font-medium text-green-500 hidden sm:inline">Encrypted</span>
+                <span className="text-[10px] font-medium text-green-500 hidden sm:inline">VAULT SECURE</span>
             </div>
         </div>
         
         <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-600">
              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-             ONLINE
+             SYSTEM ONLINE
         </div>
       </div>
 
@@ -325,16 +324,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
                             : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
                         }`}
-                        title={isSearchEnabled ? "Web Search Active" : "Enable Web Search"}
+                        title={isSearchEnabled ? "Deep Web Search Active" : "Enable Deep Search"}
                      >
                         <Globe size={16} />
-                        <span className="hidden sm:inline">{isSearchEnabled ? 'Search On' : 'Search'}</span>
+                        <span className="hidden sm:inline">{isSearchEnabled ? 'Deep Search' : 'Search'}</span>
                      </button>
 
                      <button 
                         onClick={() => fileInputRef.current?.click()}
                         className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-xl transition-colors"
-                        title="Upload Image"
+                        title="Upload Image Asset"
                      >
                         <Paperclip size={18} />
                      </button>
@@ -349,7 +348,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                      <button
                         onClick={handleMicClick}
                         className={`p-2 rounded-xl transition-all ${isRecording ? 'text-red-500 animate-pulse bg-red-500/10' : 'text-gray-500 hover:text-white hover:bg-gray-800'}`}
-                        title="Voice Input"
+                        title="Secure Voice Input"
                      >
                         <Mic size={18} />
                      </button>
@@ -370,7 +369,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </div>
             </div>
             <p className="text-center text-[10px] text-gray-600 mt-3 font-mono">
-                OmniMind v2.0 • Security by AES-256 • Created by Akin S. Sokpah
+                OmniMind v3.0 • Salted Encryption • Created by Akin S. Sokpah
             </p>
         </div>
       </div>

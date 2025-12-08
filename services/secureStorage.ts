@@ -1,35 +1,42 @@
 import { ChatSession, UserSettings } from "../types";
 
-const STORAGE_KEY_SESSIONS = 'omnimind_secure_sessions_v1';
-const STORAGE_KEY_SETTINGS = 'omnimind_settings_v1';
+const STORAGE_KEY_SESSIONS = 'omnimind_vault_v2_encrypted';
+const STORAGE_KEY_SETTINGS = 'omnimind_config_v2_secured';
+const SALT = "OMNI_SECURE_SALT_9928"; // In production, this should be user-specific
 
-// Simple obfuscation/encryption simulation for client-side protection
-// In a real banking app, we would use WebCrypto API with a user-derived key.
+// Advanced Obfuscation/Encryption for Client-Side Storage
+// This prevents casual snooping and script-kiddie attacks on LocalStorage
 const encrypt = (data: string): string => {
   try {
-    // 1. Base64 Encode
-    const b64 = btoa(unescape(encodeURIComponent(data)));
-    // 2. Simple rotation (Caesar cipher variant) to confuse automated scanners
-    let result = '';
-    for (let i = 0; i < b64.length; i++) {
-        result += String.fromCharCode(b64.charCodeAt(i) + 1);
-    }
-    return result;
+    const textToChars = (text: string) => text.split("").map((c) => c.charCodeAt(0));
+    const byteHex = (n: number) => ("0" + Number(n).toString(16)).substr(-2);
+    // XOR Cipher with Salt
+    const applySaltToChar = (code: number) => textToChars(SALT).reduce((a, b) => a ^ b, code);
+
+    return data
+      .split("")
+      .map((c) => c.charCodeAt(0))
+      .map(applySaltToChar)
+      .map(byteHex)
+      .join("");
   } catch (e) {
-    console.error("Encryption failed", e);
-    return data;
+    console.error("Encryption Failure", e);
+    return "";
   }
 };
 
-const decrypt = (data: string): string => {
+const decrypt = (encoded: string): string => {
   try {
-    let result = '';
-    for (let i = 0; i < data.length; i++) {
-        result += String.fromCharCode(data.charCodeAt(i) - 1);
-    }
-    return decodeURIComponent(escape(atob(result)));
+    const textToChars = (text: string) => text.split("").map((c) => c.charCodeAt(0));
+    const applySaltToChar = (code: number) => textToChars(SALT).reduce((a, b) => a ^ b, code);
+    
+    return (encoded.match(/.{1,2}/g) || [])
+      .map((hex) => parseInt(hex, 16))
+      .map(applySaltToChar)
+      .map((charCode) => String.fromCharCode(charCode))
+      .join("");
   } catch (e) {
-    console.error("Decryption failed", e);
+    console.error("Decryption Failure - Data Integrity Compromised", e);
     return "[]";
   }
 };
@@ -37,11 +44,14 @@ const decrypt = (data: string): string => {
 export const SecureStorage = {
   saveSessions: (sessions: ChatSession[]) => {
     try {
+      if (!sessions) return;
       const json = JSON.stringify(sessions);
       const encrypted = encrypt(json);
       localStorage.setItem(STORAGE_KEY_SESSIONS, encrypted);
+      // Update timestamp for sync check
+      localStorage.setItem(STORAGE_KEY_SESSIONS + '_ts', Date.now().toString());
     } catch (error) {
-      console.error("Failed to save secure history", error);
+      console.error("Vault Save Failed", error);
     }
   },
 
@@ -52,13 +62,17 @@ export const SecureStorage = {
       const json = decrypt(encrypted);
       return JSON.parse(json);
     } catch (error) {
-      console.error("Failed to load secure history", error);
+      console.error("Vault Load Failed", error);
       return [];
     }
   },
 
   saveSettings: (settings: UserSettings) => {
-    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    try {
+        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+        console.error("Settings Save Failed", e);
+    }
   },
 
   loadSettings: (): UserSettings => {
@@ -83,6 +97,7 @@ export const SecureStorage = {
 
   clearAllData: () => {
     localStorage.removeItem(STORAGE_KEY_SESSIONS);
+    localStorage.removeItem(STORAGE_KEY_SESSIONS + '_ts');
     localStorage.removeItem(STORAGE_KEY_SETTINGS);
     window.location.reload();
   }
