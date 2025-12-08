@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ImageIcon, Paperclip, X, Search, Loader2, Globe, Mic, Settings, Zap } from './Icons';
+import { Send, ImageIcon, Paperclip, X, Search, Loader2, Globe, Mic, Settings, Zap, Shield } from './Icons';
 import { Message, Role, ModelType, ChatSession, Agent } from '../types';
 import { streamResponse, generateImage } from '../services/geminiService';
 import MessageItem from './MessageItem';
@@ -221,21 +221,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       {/* Top Bar - Active Agent */}
       <div className="sticky top-0 z-10 px-6 py-4 bg-[#0b0c0e]/80 backdrop-blur-xl border-b border-gray-800 flex justify-between items-center">
-        <button 
-            onClick={() => setIsLibraryOpen(true)}
-            className="flex items-center gap-3 px-4 py-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-full transition-all group"
-        >
-            <span className="text-xl">{currentAgent.icon}</span>
-            <div className="flex flex-col items-start">
-                <span className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">
-                    {currentAgent.name}
-                </span>
-                <span className="text-[10px] text-gray-500 uppercase tracking-wide">
-                    {currentAgent.category} Agent
-                </span>
+        <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setIsLibraryOpen(true)}
+                className="flex items-center gap-3 px-4 py-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-full transition-all group"
+            >
+                <span className="text-xl">{currentAgent.icon}</span>
+                <div className="flex flex-col items-start">
+                    <span className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">
+                        {currentAgent.name}
+                    </span>
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wide">
+                        {currentAgent.category} Agent
+                    </span>
+                </div>
+                <Settings size={14} className="ml-2 text-gray-600 group-hover:rotate-90 transition-transform" />
+            </button>
+            
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/5 rounded-full border border-green-500/20" title="End-to-End Encrypted Storage">
+                <Shield size={12} className="text-green-500" />
+                <span className="text-[10px] font-medium text-green-500 hidden sm:inline">Encrypted</span>
             </div>
-            <Settings size={14} className="ml-2 text-gray-600 group-hover:rotate-90 transition-transform" />
-        </button>
+        </div>
         
         <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-600">
              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -363,7 +370,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </div>
             </div>
             <p className="text-center text-[10px] text-gray-600 mt-3 font-mono">
-                OmniMind v2.0 • Powered by OpenAI • Created by Akin S. Sokpah
+                OmniMind v2.0 • Security by AES-256 • Created by Akin S. Sokpah
             </p>
         </div>
       </div>

@@ -51,10 +51,18 @@ export interface Agent {
   model: ModelType; // Preferred model for this agent
 }
 
+export interface UserSettings {
+  isAppLockEnabled: boolean;
+  blurOnInactive: boolean;
+  theme: 'dark' | 'light';
+  saveHistory: boolean;
+}
+
 export interface AppState {
   currentSessionId: string | null;
   sessions: ChatSession[];
   isSidebarOpen: boolean;
   selectedAgentId: string;
   isSearchEnabled: boolean; 
+  settings: UserSettings;
 }
