@@ -3,6 +3,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { signInWithGoogle, logOut, useAuth } from './services/firebase';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import Hub from './components/Hub';
 import { AppState, ChatSession, Message, ModelType, User, UserSettings } from './types';
 import { Menu } from './components/Icons';
 import { AGENTS_LIBRARY } from './constants';
@@ -19,6 +20,8 @@ const App: React.FC = () => {
   // App State with Persistence
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'hub' | 'chat'>('hub');
+  
   const [settings, setSettings] = useState<UserSettings>({
       isAppLockEnabled: false,
       blurOnInactive: true,
@@ -54,11 +57,10 @@ const App: React.FC = () => {
         const loadedSessions = SecureStorage.loadSessions();
         if (loadedSessions.length > 0) {
             setSessions(loadedSessions);
-        } else {
-            createNewSession();
+            // Optional: If you want to auto-load the last chat, uncomment below.
+            // But 'Hub' view is cleaner for startup.
+            // setCurrentSessionId(loadedSessions[0].id);
         }
-    } else {
-        createNewSession();
     }
 
     // Auth
@@ -112,16 +114,23 @@ const App: React.FC = () => {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [settings.blurOnInactive]);
 
-  const createNewSession = () => {
+  const createNewSession = (initialAgentId?: string) => {
+    const agentToUse = initialAgentId || selectedAgentId;
     const newSession: ChatSession = {
       id: Date.now().toString(),
       title: 'New Chat',
       messages: [],
       updatedAt: Date.now(),
-      agentId: selectedAgentId
+      agentId: agentToUse
     };
+    
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
+    if (initialAgentId) {
+        setSelectedAgentId(initialAgentId);
+    }
+    setCurrentView('chat');
+
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
@@ -137,7 +146,7 @@ const App: React.FC = () => {
   };
 
   const getCurrentSession = () => {
-    return sessions.find(s => s.id === currentSessionId) || sessions[0];
+    return sessions.find(s => s.id === currentSessionId) || null;
   };
 
   return (
@@ -149,6 +158,10 @@ const App: React.FC = () => {
         selectedAgentId={selectedAgentId}
         onSelectAgent={(agent) => {
             setSelectedAgentId(agent.id);
+            // If in Hub view, selecting an agent starts a chat immediately
+            if (currentView === 'hub') {
+                createNewSession(agent.id);
+            }
         }}
       />
 
@@ -164,11 +177,17 @@ const App: React.FC = () => {
         sessions={sessions}
         currentUser={currentUser}
         currentSessionId={currentSessionId}
-        onNewChat={createNewSession}
+        currentView={currentView}
+        onNewChat={() => createNewSession()}
         onSelectSession={(id) => {
             setCurrentSessionId(id);
             const sess = sessions.find(s => s.id === id);
             if (sess && sess.agentId) setSelectedAgentId(sess.agentId);
+            setCurrentView('chat');
+            if (window.innerWidth < 768) setIsSidebarOpen(false);
+        }}
+        onNavigateHome={() => {
+            setCurrentView('hub');
             if (window.innerWidth < 768) setIsSidebarOpen(false);
         }}
         onSignOut={logOut}
@@ -193,19 +212,28 @@ const App: React.FC = () => {
         </div>
 
         <main className="flex-1 h-full overflow-hidden relative">
-            {getCurrentSession() ? (
-                <ChatInterface 
-                    currentSession={getCurrentSession()}
-                    onUpdateSession={updateCurrentSession}
-                    selectedAgentId={selectedAgentId}
-                    setSelectedAgentId={setSelectedAgentId}
-                    isSearchEnabled={isSearchEnabled}
-                    setIsSearchEnabled={setIsSearchEnabled}
+            {currentView === 'hub' ? (
+                <Hub 
+                    currentUser={currentUser} 
+                    onSelectAgent={(agentId) => createNewSession(agentId)}
+                    onNewChat={() => createNewSession()}
                 />
             ) : (
-                <div className="flex items-center justify-center h-full flex-col">
-                    <button onClick={createNewSession} className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition font-medium">Start New Chat</button>
-                </div>
+                getCurrentSession() ? (
+                    <ChatInterface 
+                        currentSession={getCurrentSession()!}
+                        onUpdateSession={updateCurrentSession}
+                        selectedAgentId={selectedAgentId}
+                        setSelectedAgentId={setSelectedAgentId}
+                        isSearchEnabled={isSearchEnabled}
+                        setIsSearchEnabled={setIsSearchEnabled}
+                    />
+                ) : (
+                   // Fallback if view is chat but no session exists
+                    <div className="flex items-center justify-center h-full flex-col">
+                        <button onClick={() => createNewSession()} className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition font-medium">Start New Chat</button>
+                    </div>
+                )
             )}
         </main>
       </div>

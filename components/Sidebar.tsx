@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, LogOut, Settings, User as UserIcon, Zap, Shield } from './Icons';
+import { Plus, MessageSquare, LogOut, Settings, User as UserIcon, Zap, Shield, LayoutGrid } from './Icons';
 import { ChatSession, User } from '../types';
 
 interface SidebarProps {
@@ -7,8 +7,10 @@ interface SidebarProps {
   sessions: ChatSession[];
   currentUser: User | null;
   currentSessionId: string | null;
+  currentView: 'hub' | 'chat';
   onNewChat: () => void;
   onSelectSession: (id: string) => void;
+  onNavigateHome: () => void;
   onSignOut: () => void;
   onLogin: () => void;
   toggleSidebar: () => void;
@@ -21,8 +23,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   sessions,
   currentUser,
   currentSessionId,
+  currentView,
   onNewChat,
   onSelectSession,
+  onNavigateHome,
   onSignOut,
   onLogin,
   toggleSidebar,
@@ -36,7 +40,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       } md:relative md:translate-x-0 flex flex-col`}
     >
       <div className="p-5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div 
+            onClick={onNavigateHome}
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+        >
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
                 <Zap className="text-white" size={18} fill="currentColor" />
             </div>
@@ -50,6 +57,18 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="px-4 pb-2 space-y-2">
+        <button
+          onClick={onNavigateHome}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+            currentView === 'hub' 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+              : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+          }`}
+        >
+          <LayoutGrid size={20} />
+          <span>Hub</span>
+        </button>
+
         <button
           onClick={onNewChat}
           className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-200 text-black rounded-xl transition-all font-medium shadow-md shadow-white/5 active:scale-95"
@@ -87,12 +106,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             key={session.id}
             onClick={() => onSelectSession(session.id)}
             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left transition-all duration-200 group relative ${
-              currentSessionId === session.id
+              currentSessionId === session.id && currentView === 'chat'
                 ? 'bg-[#1c1f26] text-white shadow-sm border border-gray-800'
                 : 'text-gray-400 hover:bg-[#16181c] hover:text-gray-200'
             }`}
           >
-            <MessageSquare size={16} className={currentSessionId === session.id ? 'text-blue-500' : 'text-gray-600 group-hover:text-gray-400'} />
+            <MessageSquare size={16} className={currentSessionId === session.id && currentView === 'chat' ? 'text-blue-500' : 'text-gray-600 group-hover:text-gray-400'} />
             <span className="truncate flex-1">{session.title}</span>
           </button>
         ))}
