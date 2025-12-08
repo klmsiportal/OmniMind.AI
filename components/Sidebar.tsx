@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, LogOut, Settings, User as UserIcon, Zap, Shield, LayoutGrid } from './Icons';
+import { Plus, MessageSquare, LogOut, Settings, User as UserIcon, Zap, Shield, LayoutGrid, Radio } from './Icons';
 import { ChatSession, User } from '../types';
 
 interface SidebarProps {
@@ -7,10 +7,11 @@ interface SidebarProps {
   sessions: ChatSession[];
   currentUser: User | null;
   currentSessionId: string | null;
-  currentView: 'hub' | 'chat';
+  currentView: 'hub' | 'chat' | 'live';
   onNewChat: () => void;
   onSelectSession: (id: string) => void;
   onNavigateHome: () => void;
+  onNavigateLive: () => void;
   onSignOut: () => void;
   onLogin: () => void;
   toggleSidebar: () => void;
@@ -27,6 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onNewChat,
   onSelectSession,
   onNavigateHome,
+  onNavigateLive,
   onSignOut,
   onLogin,
   toggleSidebar,
@@ -75,6 +77,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           <Plus size={20} />
           <span>New Chat</span>
+        </button>
+
+        <button
+          onClick={onNavigateLive}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium group ${
+             currentView === 'live'
+              ? 'bg-red-500/10 text-red-400 border border-red-500/20 shadow-lg shadow-red-900/10'
+              : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+          }`}
+        >
+          <Radio size={20} className={currentView === 'live' ? 'animate-pulse' : 'group-hover:text-red-400'} />
+          <span>Live Conversation</span>
         </button>
 
         <button

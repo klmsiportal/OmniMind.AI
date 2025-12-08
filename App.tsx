@@ -4,6 +4,7 @@ import { signInWithGoogle, logOut, useAuth } from './services/firebase';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import Hub from './components/Hub';
+import LiveInterface from './components/LiveInterface';
 import { AppState, ChatSession, Message, ModelType, User, UserSettings } from './types';
 import { Menu } from './components/Icons';
 import { AGENTS_LIBRARY } from './constants';
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   // App State with Persistence
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'hub' | 'chat'>('hub');
+  const [currentView, setCurrentView] = useState<'hub' | 'chat' | 'live'>('hub');
   
   const [settings, setSettings] = useState<UserSettings>({
       isAppLockEnabled: false,
@@ -149,6 +150,37 @@ const App: React.FC = () => {
     return sessions.find(s => s.id === currentSessionId) || null;
   };
 
+  const renderContent = () => {
+      if (currentView === 'live') {
+          return <LiveInterface onEndCall={() => setCurrentView('hub')} />;
+      }
+      
+      if (currentView === 'hub') {
+          return (
+              <Hub 
+                currentUser={currentUser} 
+                onSelectAgent={(agentId) => createNewSession(agentId)}
+                onNewChat={() => createNewSession()}
+              />
+          );
+      }
+      
+      return getCurrentSession() ? (
+          <ChatInterface 
+            currentSession={getCurrentSession()!}
+            onUpdateSession={updateCurrentSession}
+            selectedAgentId={selectedAgentId}
+            setSelectedAgentId={setSelectedAgentId}
+            isSearchEnabled={isSearchEnabled}
+            setIsSearchEnabled={setIsSearchEnabled}
+          />
+      ) : (
+          <div className="flex items-center justify-center h-full flex-col">
+              <button onClick={() => createNewSession()} className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition font-medium">Start New Chat</button>
+          </div>
+      );
+  };
+
   return (
     <div className={`flex h-screen bg-[#0b0c0e] text-white overflow-hidden font-sans selection:bg-blue-500/30 ${isBlurred ? 'blur-xl scale-105 opacity-50 transition-all duration-500' : 'transition-all duration-300'}`}>
       
@@ -190,6 +222,10 @@ const App: React.FC = () => {
             setCurrentView('hub');
             if (window.innerWidth < 768) setIsSidebarOpen(false);
         }}
+        onNavigateLive={() => {
+            setCurrentView('live');
+            if (window.innerWidth < 768) setIsSidebarOpen(false);
+        }}
         onSignOut={logOut}
         onLogin={signInWithGoogle}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -212,29 +248,7 @@ const App: React.FC = () => {
         </div>
 
         <main className="flex-1 h-full overflow-hidden relative">
-            {currentView === 'hub' ? (
-                <Hub 
-                    currentUser={currentUser} 
-                    onSelectAgent={(agentId) => createNewSession(agentId)}
-                    onNewChat={() => createNewSession()}
-                />
-            ) : (
-                getCurrentSession() ? (
-                    <ChatInterface 
-                        currentSession={getCurrentSession()!}
-                        onUpdateSession={updateCurrentSession}
-                        selectedAgentId={selectedAgentId}
-                        setSelectedAgentId={setSelectedAgentId}
-                        isSearchEnabled={isSearchEnabled}
-                        setIsSearchEnabled={setIsSearchEnabled}
-                    />
-                ) : (
-                   // Fallback if view is chat but no session exists
-                    <div className="flex items-center justify-center h-full flex-col">
-                        <button onClick={() => createNewSession()} className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition font-medium">Start New Chat</button>
-                    </div>
-                )
-            )}
+            {renderContent()}
         </main>
       </div>
 
